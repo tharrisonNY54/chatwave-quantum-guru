@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Code, Command } from 'lucide-react';
+import ApiKeySetup from './ApiKeySetup';
 
 const Header: React.FC = () => {
   return (
@@ -14,7 +15,8 @@ const Header: React.FC = () => {
           <p className="text-xs text-muted-foreground">Your quantum computing assistant</p>
         </div>
       </div>
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
+        <ApiKeySetup />
         <div className="glass text-xs px-2 py-1 rounded-md flex items-center">
           <Command size={12} className="mr-1" />
           <span>Q Language</span>

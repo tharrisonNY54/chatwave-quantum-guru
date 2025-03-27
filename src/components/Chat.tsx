@@ -4,6 +4,8 @@ import { Message as MessageType } from '../lib/types';
 import Message from './Message';
 import MessageInput from './MessageInput';
 import { sendMessageToAPI } from '../lib/api';
+import { sendPromptToHuggingFace, getHuggingFaceApiKey } from '../lib/huggingfaceApi';
+import { toast } from 'sonner';
 
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<MessageType[]>([
@@ -16,9 +18,13 @@ const Chat: React.FC = () => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [usingHuggingFace, setUsingHuggingFace] = useState(false);
 
   useEffect(() => {
     scrollToBottom();
+    // Check if Hugging Face API key is set
+    const apiKey = getHuggingFaceApiKey();
+    setUsingHuggingFace(!!apiKey);
   }, [messages]);
 
   const scrollToBottom = () => {
@@ -38,8 +44,28 @@ const Chat: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Send message to API and get response
-      const response = await sendMessageToAPI(content);
+      let response: MessageType;
+      
+      if (usingHuggingFace) {
+        // Use Hugging Face API
+        try {
+          const hfResponse = await sendPromptToHuggingFace(content, messages);
+          response = {
+            id: `assistant-${Date.now()}`,
+            content: hfResponse,
+            role: 'assistant',
+            timestamp: new Date(),
+          };
+        } catch (error) {
+          console.error('Error with Hugging Face API:', error);
+          toast.error(`Hugging Face API error: ${error.message}`);
+          // Fall back to mock API if Hugging Face fails
+          response = await sendMessageToAPI(content);
+        }
+      } else {
+        // Use mock API as fallback
+        response = await sendMessageToAPI(content);
+      }
       
       // Add AI response
       setMessages(prev => [...prev, response]);
