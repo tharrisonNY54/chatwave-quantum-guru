@@ -54,8 +54,14 @@ export const sendPromptToHuggingFace = async (
   const model = currentModel;
 
   // Construct a simple text prompt with system message and conversation history
-  let textPrompt =
-    "You are QuantumGuru, an AI assistant specialized in explaining Q, the quantum computing programming language. Provide concise, accurate responses about quantum computing concepts, Q syntax, and quantum algorithms.\n\n";
+  let textPrompt = 
+  "You are QuantumGuru, an expert AI assistant that only answers questions related to:\n" +
+  "- quantum computing\n" +
+  "- quantum programming\n" +
+  "- the Q programming language\n" +
+  "- quantum gates, circuits, algorithms, and quantum math\n\n" +
+  "If the user asks about anything else (sports, politics, personal advice, etc.), respond only with:\n" +
+  "\"I'm here only to help with quantum computing and Q programming. Please ask me something about those topics.\"\n\n";
 
   conversationHistory.forEach((msg) => {
     textPrompt += `${msg.role === 'user' ? 'Human' : 'Assistant'}: ${msg.content}\n`;
