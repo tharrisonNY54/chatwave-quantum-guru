@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { toast } from 'sonner';
-import { Bot, AlertCircle, RefreshCw } from 'lucide-react';
+import { Bot, AlertCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 interface ApiKeySetupProps {
@@ -36,6 +36,24 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange })
   const [localOpen, setLocalOpen] = useState(open);
   const [activeTab, setActiveTab] = useState('model');
   const [testingConnection, setTestingConnection] = useState(false);
+  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
+
+  // Check network status
+  useEffect(() => {
+    const handleOnline = () => setNetworkStatus('online');
+    const handleOffline = () => setNetworkStatus('offline');
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Initial check
+    setNetworkStatus(navigator.onLine ? 'online' : 'offline');
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (onOpenChange) {
@@ -65,12 +83,30 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange })
 
   const testConnection = async () => {
     setTestingConnection(true);
+    
+    // Check network status first
+    if (networkStatus === 'offline') {
+      toast.error('Network is offline. Please check your internet connection.');
+      localStorage.setItem('hf_connection_status', 'failed');
+      localStorage.setItem('hf_last_error', 'Network is offline');
+      setTestingConnection(false);
+      return;
+    }
+    
     try {
+      const apiKeyToUse = apiKey.includes('•') ? getHuggingFaceApiKey() : apiKey;
+      
+      if (!apiKeyToUse) {
+        toast.error('API key is not set. Please enter a valid Hugging Face API key.');
+        setTestingConnection(false);
+        return;
+      }
+      
       // Make a simple request to validate the API key and model
       const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey.includes('•') ? getHuggingFaceApiKey() : apiKey}`,
+          'Authorization': `Bearer ${apiKeyToUse}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
@@ -111,8 +147,8 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange })
     } catch (error) {
       console.error('Connection test error:', error);
       localStorage.setItem('hf_connection_status', 'failed');
-      localStorage.setItem('hf_last_error', error.message || 'Unknown error');
-      toast.error(`Connection test failed: ${error.message}`);
+      localStorage.setItem('hf_last_error', `Failed to fetch: Network error or CORS issue. Please check your internet connection.`);
+      toast.error('Connection test failed: Network error. Please check your internet connection and make sure your browser allows cross-origin requests.');
     } finally {
       setTestingConnection(false);
     }
@@ -153,7 +189,15 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange })
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>AI Model Setup</DialogTitle>
+          <DialogTitle className="flex items-center justify-between">
+            AI Model Setup
+            {networkStatus === 'offline' && (
+              <span className="text-amber-500 text-xs flex items-center">
+                <WifiOff size={12} className="mr-1" />
+                Offline
+              </span>
+            )}
+          </DialogTitle>
           <DialogDescription>
             Enter your Hugging Face API key and select a model to enhance your chat experience.
           </DialogDescription>
@@ -249,25 +293,34 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange })
         </Tabs>
         
         <div className="pt-2 pb-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full flex items-center justify-center gap-2"
-            onClick={testConnection}
-            disabled={testingConnection || (!apiKey && !isKeySet) || !model}
-          >
-            {testingConnection ? (
-              <>
-                <RefreshCw size={14} className="animate-spin" />
-                <span>Testing connection...</span>
-              </>
-            ) : (
-              <>
-                <Bot size={14} />
-                <span>Test Connection</span>
-              </>
+          <div className="space-y-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full flex items-center justify-center gap-2"
+              onClick={testConnection}
+              disabled={testingConnection || (!apiKey && !isKeySet) || !model || networkStatus === 'offline'}
+            >
+              {testingConnection ? (
+                <>
+                  <RefreshCw size={14} className="animate-spin" />
+                  <span>Testing connection...</span>
+                </>
+              ) : (
+                <>
+                  <Bot size={14} />
+                  <span>Test Connection</span>
+                </>
+              )}
+            </Button>
+            
+            {networkStatus === 'offline' && (
+              <p className="text-xs text-amber-500 flex items-center justify-center">
+                <WifiOff size={12} className="mr-1" />
+                Network appears to be offline. Check your internet connection.
+              </p>
             )}
-          </Button>
+          </div>
         </div>
         
         <DialogFooter>

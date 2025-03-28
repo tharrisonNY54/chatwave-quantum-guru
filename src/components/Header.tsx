@@ -19,7 +19,11 @@ const Header: React.FC = () => {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <div onClick={() => setIsApiDialogOpen(true)} className="cursor-pointer">
+        <div 
+          onClick={() => setIsApiDialogOpen(true)} 
+          className="cursor-pointer hover:opacity-80 transition-opacity" 
+          aria-label="Configure AI model"
+        >
           <ModelIndicator />
         </div>
         <ApiKeySetup open={isApiDialogOpen} onOpenChange={setIsApiDialogOpen} />
