@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 const HF_INFERENCE_API = 'https://api-inference.huggingface.co/models/';
 
 // Initialize with a default model, but this can be configured
-const currentModel = 'Qwen/Qwen2.5-Omni-7B';
+const currentModel = 'deepseek-ai/DeepSeek-V3-0324';
 let apiKey = '';
 
 export const setHuggingFaceApiKey = (key: string) => {
