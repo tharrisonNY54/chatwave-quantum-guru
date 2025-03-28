@@ -6,7 +6,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 const ModelIndicator: React.FC = () => {
   const [modelInfo, setModelInfo] = useState({
     isUsingHF: false,
-    modelName: 'Qwen/Qwen2.5-Omni-7B',
+    modelName: 'mistralai/Mistral-7B-Instruct-v0.2',
+,
     isConnected: false,
     lastError: '',
     isNetworkOffline: false,
