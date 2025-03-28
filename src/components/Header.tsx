@@ -1,10 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Code, Command } from 'lucide-react';
 import ApiKeySetup from './ApiKeySetup';
 import ModelIndicator from './ModelIndicator';
 
 const Header: React.FC = () => {
+  const [isApiDialogOpen, setIsApiDialogOpen] = useState(false);
+  
   return (
     <header className="glass rounded-xl p-3 flex items-center justify-between">
       <div className="flex items-center space-x-2">
@@ -17,8 +19,10 @@ const Header: React.FC = () => {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <ModelIndicator />
-        <ApiKeySetup />
+        <div onClick={() => setIsApiDialogOpen(true)} className="cursor-pointer">
+          <ModelIndicator />
+        </div>
+        <ApiKeySetup open={isApiDialogOpen} onOpenChange={setIsApiDialogOpen} />
         <div className="glass text-xs px-2 py-1 rounded-md flex items-center">
           <Command size={12} className="mr-1" />
           <span>Q Language</span>

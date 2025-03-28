@@ -5,8 +5,13 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { toast } from 'sonner';
-import { Bot, AlertCircle } from 'lucide-react';
+import { Bot, AlertCircle, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+
+interface ApiKeySetupProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
 
 const ModelSuggestion = ({ name, description, modelId, onClick }: { name: string, description: string, modelId: string, onClick: (id: string) => void }) => (
   <div 
@@ -24,12 +29,26 @@ const ModelSuggestion = ({ name, description, modelId, onClick }: { name: string
   </div>
 );
 
-const ApiKeySetup: React.FC = () => {
+const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange }) => {
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('');
   const [isKeySet, setIsKeySet] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [localOpen, setLocalOpen] = useState(open);
   const [activeTab, setActiveTab] = useState('model');
+  const [testingConnection, setTestingConnection] = useState(false);
+
+  useEffect(() => {
+    if (onOpenChange) {
+      setLocalOpen(open);
+    }
+  }, [open, onOpenChange]);
+
+  const handleOpenChange = (value: boolean) => {
+    setLocalOpen(value);
+    if (onOpenChange) {
+      onOpenChange(value);
+    }
+  };
 
   useEffect(() => {
     const savedKey = getHuggingFaceApiKey();
@@ -43,6 +62,61 @@ const ApiKeySetup: React.FC = () => {
       setApiKey('•'.repeat(savedKey.length));
     }
   }, []);
+
+  const testConnection = async () => {
+    setTestingConnection(true);
+    try {
+      // Make a simple request to validate the API key and model
+      const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey.includes('•') ? getHuggingFaceApiKey() : apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          inputs: {
+            messages: [
+              {
+                role: 'user',
+                content: 'Hello, are you working?'
+              }
+            ]
+          },
+          parameters: {
+            max_new_tokens: 10,
+            temperature: 0.7,
+          }
+        }),
+      });
+      
+      if (response.ok) {
+        toast.success('Connection successful! Your model is working.');
+        localStorage.setItem('hf_connection_status', 'connected');
+        localStorage.removeItem('hf_last_error');
+      } else {
+        const error = await response.text();
+        localStorage.setItem('hf_connection_status', 'failed');
+        localStorage.setItem('hf_last_error', `Error ${response.status}: ${error.substring(0, 100)}`);
+        
+        if (response.status === 401) {
+          toast.error('Invalid API Key. Please check your Hugging Face API key.');
+        } else if (response.status === 403) {
+          toast.error('API Key error: Your API key does not have sufficient permissions.');
+        } else if (response.status === 404) {
+          toast.error(`Model not found: ${model}. Please check the model name.`);
+        } else {
+          toast.error(`API error: ${response.status}. Please try a different model.`);
+        }
+      }
+    } catch (error) {
+      console.error('Connection test error:', error);
+      localStorage.setItem('hf_connection_status', 'failed');
+      localStorage.setItem('hf_last_error', error.message || 'Unknown error');
+      toast.error(`Connection test failed: ${error.message}`);
+    } finally {
+      setTestingConnection(false);
+    }
+  };
 
   const handleSave = () => {
     if (apiKey && !apiKey.includes('•')) {
@@ -59,7 +133,10 @@ const ApiKeySetup: React.FC = () => {
       return;
     }
     
-    setOpen(false);
+    // Automatically test the connection after saving
+    testConnection();
+    
+    handleOpenChange(false);
   };
 
   const selectModel = (modelId: string) => {
@@ -67,7 +144,7 @@ const ApiKeySetup: React.FC = () => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={localOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="flex items-center gap-2">
           <Bot size={16} />
@@ -171,11 +248,33 @@ const ApiKeySetup: React.FC = () => {
           </TabsContent>
         </Tabs>
         
+        <div className="pt-2 pb-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full flex items-center justify-center gap-2"
+            onClick={testConnection}
+            disabled={testingConnection || (!apiKey && !isKeySet) || !model}
+          >
+            {testingConnection ? (
+              <>
+                <RefreshCw size={14} className="animate-spin" />
+                <span>Testing connection...</span>
+              </>
+            ) : (
+              <>
+                <Bot size={14} />
+                <span>Test Connection</span>
+              </>
+            )}
+          </Button>
+        </div>
+        
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!apiKey || !model}>
+          <Button onClick={handleSave} disabled={(!apiKey && !isKeySet) || !model}>
             Save
           </Button>
         </DialogFooter>

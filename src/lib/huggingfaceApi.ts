@@ -44,6 +44,8 @@ export const sendPromptToHuggingFace = async (
 ): Promise<string> => {
   const apiKey = getHuggingFaceApiKey();
   if (!apiKey) {
+    localStorage.setItem('hf_connection_status', 'failed');
+    localStorage.setItem('hf_last_error', 'API key not set');
     toast.error('Hugging Face API key is not set. Please set it in the AI Model settings.');
     throw new Error('Hugging Face API key is not set');
   }
@@ -73,6 +75,9 @@ export const sendPromptToHuggingFace = async (
   });
 
   try {
+    console.log('Sending to Hugging Face model:', model);
+    console.log('Message format:', JSON.stringify(messages, null, 2));
+    
     // First, try the chat completion format (for newer models)
     const chatResponse = await fetch(`${HF_INFERENCE_API}${model}`, {
       method: 'POST',
@@ -94,12 +99,21 @@ export const sendPromptToHuggingFace = async (
     });
 
     if (!chatResponse.ok) {
+      console.error('Chat format failed with status:', chatResponse.status);
+      const errorText = await chatResponse.text();
+      console.error('Error response:', errorText);
+      
+      // Record connection failure
+      localStorage.setItem('hf_connection_status', 'failed');
+      localStorage.setItem('hf_last_error', `Chat format error: ${chatResponse.status}`);
+      
       // If chat completion fails, try text generation format (for older models)
       if (chatResponse.status === 403) {
         toast.error('API Key error: Your API key does not have sufficient permissions. Please check your Hugging Face account.');
         throw new Error(`API Key error: Insufficient permissions (403)`);
       }
       
+      console.log('Trying text format as fallback');
       const textResponse = await fetch(`${HF_INFERENCE_API}${model}`, {
         method: 'POST',
         headers: {
@@ -119,7 +133,10 @@ export const sendPromptToHuggingFace = async (
 
       if (!textResponse.ok) {
         const errorText = await textResponse.text();
-        console.error('Hugging Face API error:', errorText);
+        console.error('Text format failed:', errorText);
+        
+        localStorage.setItem('hf_connection_status', 'failed');
+        localStorage.setItem('hf_last_error', `Text format error: ${textResponse.status} - ${errorText.substring(0, 100)}`);
         
         if (textResponse.status === 401) {
           toast.error('Invalid API Key. Please check your Hugging Face API key.');
@@ -133,10 +150,16 @@ export const sendPromptToHuggingFace = async (
       }
 
       const data = await textResponse.json();
+      localStorage.setItem('hf_connection_status', 'connected');
+      localStorage.removeItem('hf_last_error');
       return data[0]?.generated_text || 'No response generated. Please try a different model.';
     }
 
     const data = await chatResponse.json();
+    console.log('HF response:', data);
+    
+    localStorage.setItem('hf_connection_status', 'connected');
+    localStorage.removeItem('hf_last_error');
     
     // Different models return responses in different formats
     if (data.generated_text) {
@@ -146,16 +169,23 @@ export const sendPromptToHuggingFace = async (
     } else if (data.outputs) {
       return data.outputs;
     } else if (data.error) {
+      localStorage.setItem('hf_connection_status', 'failed');
+      localStorage.setItem('hf_last_error', data.error);
       toast.error(`Hugging Face error: ${data.error}`);
       throw new Error(data.error);
-    } else if (data[0]?.message?.content) {
+    } else if (Array.isArray(data) && data[0]?.message?.content) {
       return data[0].message.content;
+    } else if (data?.message?.content) {
+      return data.message.content;
     } else {
       // Last resort, serialize the response
+      console.log('Using serialized response format');
       return JSON.stringify(data);
     }
   } catch (error) {
     console.error('Error querying Hugging Face:', error);
+    localStorage.setItem('hf_connection_status', 'failed');
+    localStorage.setItem('hf_last_error', error.message || 'Unknown error');
     throw new Error(`Failed to get response from Hugging Face: ${error.message}`);
   }
 };
