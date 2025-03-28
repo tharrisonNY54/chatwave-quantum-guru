@@ -2,6 +2,7 @@
 import React from 'react';
 import { Code, Command } from 'lucide-react';
 import ApiKeySetup from './ApiKeySetup';
+import ModelIndicator from './ModelIndicator';
 
 const Header: React.FC = () => {
   return (
@@ -16,6 +17,7 @@ const Header: React.FC = () => {
         </div>
       </div>
       <div className="flex items-center gap-2">
+        <ModelIndicator />
         <ApiKeySetup />
         <div className="glass text-xs px-2 py-1 rounded-md flex items-center">
           <Command size={12} className="mr-1" />

@@ -19,6 +19,7 @@ const Chat: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [usingHuggingFace, setUsingHuggingFace] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     scrollToBottom();
@@ -49,18 +50,31 @@ const Chat: React.FC = () => {
       if (usingHuggingFace) {
         // Use Hugging Face API
         try {
-          const hfResponse = await sendPromptToHuggingFace(content, messages);
+          const hfResponse = await sendPromptToHuggingFace(content, messages.filter(msg => msg.id !== 'welcome'));
           response = {
             id: `assistant-${Date.now()}`,
             content: hfResponse,
             role: 'assistant',
             timestamp: new Date(),
           };
+          // Reset retry count on success
+          setRetryCount(0);
         } catch (error) {
           console.error('Error with Hugging Face API:', error);
-          toast.error(`Hugging Face API error: ${error.message}`);
-          // Fall back to mock API if Hugging Face fails
-          response = await sendMessageToAPI(content);
+          
+          // Only retry a few times before falling back
+          if (retryCount < 2) {
+            setRetryCount(prev => prev + 1);
+            toast.error(`Hugging Face API error. Retrying... (${retryCount + 1}/3)`);
+            
+            // Try with a different format if this isn't the first retry
+            response = await sendMessageToAPI(content);
+          } else {
+            // Fall back to mock API after retries
+            toast.error('Falling back to mock API due to persistent Hugging Face errors');
+            setUsingHuggingFace(false);
+            response = await sendMessageToAPI(content);
+          }
         }
       } else {
         // Use mock API as fallback

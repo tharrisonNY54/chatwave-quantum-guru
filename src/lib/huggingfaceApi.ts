@@ -1,5 +1,6 @@
 
 import { Message } from './types';
+import { toast } from 'sonner';
 
 // Default endpoint for Hugging Face Inference API
 const HF_INFERENCE_API = 'https://api-inference.huggingface.co/models/';
@@ -43,13 +44,13 @@ export const sendPromptToHuggingFace = async (
 ): Promise<string> => {
   const apiKey = getHuggingFaceApiKey();
   if (!apiKey) {
+    toast.error('Hugging Face API key is not set. Please set it in the AI Model settings.');
     throw new Error('Hugging Face API key is not set');
   }
 
   const model = getHuggingFaceModel();
   
   // Format the conversation history for the model
-  // Most models expect a specific format for the conversation
   const messages = [
     {
       role: 'system',
@@ -72,7 +73,8 @@ export const sendPromptToHuggingFace = async (
   });
 
   try {
-    const response = await fetch(`${HF_INFERENCE_API}${model}`, {
+    // First, try the chat completion format (for newer models)
+    const chatResponse = await fetch(`${HF_INFERENCE_API}${model}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -91,16 +93,52 @@ export const sendPromptToHuggingFace = async (
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Hugging Face API error:', errorText);
-      throw new Error(`API error: ${response.status}`);
+    if (!chatResponse.ok) {
+      // If chat completion fails, try text generation format (for older models)
+      if (chatResponse.status === 403) {
+        toast.error('API Key error: Your API key does not have sufficient permissions. Please check your Hugging Face account.');
+        throw new Error(`API Key error: Insufficient permissions (403)`);
+      }
+      
+      const textResponse = await fetch(`${HF_INFERENCE_API}${model}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          inputs: `${conversationHistory.map(msg => `${msg.role === 'user' ? 'Human' : 'Assistant'}: ${msg.content}`).join('\n')}\nHuman: ${prompt}\nAssistant:`,
+          parameters: {
+            max_new_tokens: 1024,
+            temperature: 0.7,
+            top_p: 0.95,
+            do_sample: true
+          }
+        }),
+      });
+
+      if (!textResponse.ok) {
+        const errorText = await textResponse.text();
+        console.error('Hugging Face API error:', errorText);
+        
+        if (textResponse.status === 401) {
+          toast.error('Invalid API Key. Please check your Hugging Face API key.');
+        } else if (textResponse.status === 404) {
+          toast.error(`Model not found: ${model}. Please check the model name.`);
+        } else {
+          toast.error(`API error: ${textResponse.status}. Please try a different model.`);
+        }
+        
+        throw new Error(`API error: ${textResponse.status}`);
+      }
+
+      const data = await textResponse.json();
+      return data[0]?.generated_text || 'No response generated. Please try a different model.';
     }
 
-    const data = await response.json();
+    const data = await chatResponse.json();
     
     // Different models return responses in different formats
-    // This handles the most common format
     if (data.generated_text) {
       return data.generated_text;
     } else if (Array.isArray(data) && data[0]?.generated_text) {
@@ -108,10 +146,13 @@ export const sendPromptToHuggingFace = async (
     } else if (data.outputs) {
       return data.outputs;
     } else if (data.error) {
+      toast.error(`Hugging Face error: ${data.error}`);
       throw new Error(data.error);
+    } else if (data[0]?.message?.content) {
+      return data[0].message.content;
     } else {
-      // If response has different format for chat models
-      return data[0]?.message?.content || JSON.stringify(data);
+      // Last resort, serialize the response
+      return JSON.stringify(data);
     }
   } catch (error) {
     console.error('Error querying Hugging Face:', error);
