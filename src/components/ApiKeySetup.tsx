@@ -102,34 +102,53 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange })
         return;
       }
       
-      // Make a simple request to validate the API key and model
-      const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKeyToUse}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          inputs: {
-            messages: [
-              {
-                role: 'user',
-                content: 'Hello, are you working?'
-              }
-            ]
+      // First try the text format which works with most models
+      try {
+        const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKeyToUse}`,
+            'Content-Type': 'application/json',
           },
-          parameters: {
-            max_new_tokens: 10,
-            temperature: 0.7,
-          }
-        }),
-      });
-      
-      if (response.ok) {
-        toast.success('Connection successful! Your model is working.');
-        localStorage.setItem('hf_connection_status', 'connected');
-        localStorage.removeItem('hf_last_error');
-      } else {
+          body: JSON.stringify({ 
+            inputs: "Hello, are you working? This is a test message."
+          }),
+        });
+        
+        if (response.ok) {
+          toast.success('Connection successful! Your model is working.');
+          localStorage.setItem('hf_connection_status', 'connected');
+          localStorage.removeItem('hf_last_error');
+          setTestingConnection(false);
+          return;
+        }
+        
+        // If first format fails, try the chat format
+        const chatResponse = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKeyToUse}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            inputs: [
+              {"role": "user", "content": "Hello, are you working? This is a test message."}
+            ],
+            parameters: {
+              max_new_tokens: 10
+            }
+          }),
+        });
+        
+        if (chatResponse.ok) {
+          toast.success('Connection successful! Your model is working with chat format.');
+          localStorage.setItem('hf_connection_status', 'connected');
+          localStorage.removeItem('hf_last_error');
+          setTestingConnection(false);
+          return;
+        }
+        
+        // If both formats fail, show appropriate error
         const error = await response.text();
         localStorage.setItem('hf_connection_status', 'failed');
         localStorage.setItem('hf_last_error', `Error ${response.status}: ${error.substring(0, 100)}`);
@@ -140,9 +159,16 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange })
           toast.error('API Key error: Your API key does not have sufficient permissions.');
         } else if (response.status === 404) {
           toast.error(`Model not found: ${model}. Please check the model name.`);
+        } else if (response.status === 422) {
+          toast.error(`API format error: This model doesn't support the formats we tried. Please try a different model.`);
         } else {
           toast.error(`API error: ${response.status}. Please try a different model.`);
         }
+      } catch (innerError) {
+        console.error('Error testing connection:', innerError);
+        localStorage.setItem('hf_connection_status', 'failed');
+        localStorage.setItem('hf_last_error', `Error: ${innerError.message}`);
+        toast.error(`Connection error: ${innerError.message}`);
       }
     } catch (error) {
       console.error('Connection test error:', error);

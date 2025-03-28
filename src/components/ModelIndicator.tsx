@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getHuggingFaceApiKey, getHuggingFaceModel } from '../lib/huggingfaceApi';
-import { Bot, AlertCircle, WifiOff } from 'lucide-react';
+import { Bot, AlertCircle, WifiOff, AlertOctagon } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 const ModelIndicator: React.FC = () => {
@@ -72,13 +72,18 @@ const ModelIndicator: React.FC = () => {
   // Determine indicator color and icon
   let indicatorClass = 'bg-primary/10';
   let Icon = Bot;
+  let textColorClass = '';
   
   if (modelInfo.isNetworkOffline) {
     indicatorClass = 'bg-red-500/20';
     Icon = WifiOff;
+    textColorClass = 'text-red-500';
   } else if (!modelInfo.isConnected) {
     indicatorClass = 'bg-amber-500/20';
-    Icon = AlertCircle;
+    Icon = modelInfo.lastError.includes('Format error') || modelInfo.lastError.includes('422') 
+      ? AlertOctagon 
+      : AlertCircle;
+    textColorClass = 'text-amber-500';
   }
 
   return (
@@ -86,8 +91,8 @@ const ModelIndicator: React.FC = () => {
       <Tooltip>
         <TooltipTrigger asChild>
           <div className={`glass text-xs px-2 py-1 rounded-md flex items-center gap-1 ${indicatorClass}`}>
-            <Icon size={12} className={!modelInfo.isConnected || modelInfo.isNetworkOffline ? "text-amber-500" : ""} />
-            <span className="max-w-24 truncate">{getShortModelName()}</span>
+            <Icon size={12} className={textColorClass} />
+            <span className={`max-w-24 truncate ${textColorClass}`}>{getShortModelName()}</span>
           </div>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
@@ -109,6 +114,13 @@ const ModelIndicator: React.FC = () => {
                 <p className="text-xs mt-1">
                   "Failed to fetch" usually indicates a network issue or CORS restriction. 
                   Check your internet connection and try a different browser.
+                </p>
+              )}
+              {modelInfo.lastError?.includes('422') && (
+                <p className="text-xs mt-1">
+                  Error 422 means the model doesn't accept our input format. 
+                  Please try a different model, such as "mistralai/Mistral-7B-Instruct-v0.2" 
+                  or "NousResearch/Nous-Hermes-Llama2-13b".
                 </p>
               )}
             </div>
