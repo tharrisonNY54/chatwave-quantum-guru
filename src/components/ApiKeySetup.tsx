@@ -28,14 +28,14 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange })
   const [testingConnection, setTestingConnection] = useState(false);
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
 
-  // Monitor network state
+  const model = 'mistralai/Mistral-7B-Instruct-v0.2';
+
   useEffect(() => {
     const handleOnline = () => setNetworkStatus('online');
     const handleOffline = () => setNetworkStatus('offline');
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     setNetworkStatus(navigator.onLine ? 'online' : 'offline');
 
     return () => {
@@ -45,22 +45,17 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange })
   }, []);
 
   useEffect(() => {
-    if (onOpenChange) {
-      setLocalOpen(open);
-    }
+    if (onOpenChange) setLocalOpen(open);
   }, [open, onOpenChange]);
 
   const handleOpenChange = (value: boolean) => {
     setLocalOpen(value);
-    if (onOpenChange) {
-      onOpenChange(value);
-    }
+    if (onOpenChange) onOpenChange(value);
   };
 
   useEffect(() => {
     const savedKey = getHuggingFaceApiKey();
     setIsKeySet(!!savedKey);
-
     if (savedKey) {
       setApiKey('•'.repeat(savedKey.length));
     }
@@ -86,8 +81,6 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange })
         return;
       }
 
-      const model = 'Qwen/Qwen2.5-Omni-7B';
-
       const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
         method: 'POST',
         headers: {
@@ -99,19 +92,20 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange })
         }),
       });
 
+      const raw = await response.text();
+
       if (response.ok) {
         toast.success(`Connection successful! Model "${model}" is working.`);
         localStorage.setItem('hf_connection_status', 'connected');
         localStorage.removeItem('hf_last_error');
       } else {
-        const error = await response.text();
         localStorage.setItem('hf_connection_status', 'failed');
-        localStorage.setItem('hf_last_error', error.slice(0, 150));
+        localStorage.setItem('hf_last_error', raw.slice(0, 150));
 
         if (response.status === 401) toast.error('Invalid API Key.');
         else if (response.status === 404) toast.error(`Model not found: ${model}`);
         else if (response.status === 422) toast.error(`Input format not supported by model.`);
-        else toast.error(`Error ${response.status}: ${error}`);
+        else toast.error(`Error ${response.status}: ${raw}`);
       }
     } catch (err: any) {
       console.error('Test connection error:', err);
@@ -154,7 +148,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ open = false, onOpenChange })
             )}
           </DialogTitle>
           <DialogDescription>
-            Enter your Hugging Face API key to use the locked model: <strong>Qwen/Qwen2.5-Omni-7B</strong>.
+            Enter your Hugging Face API key to use the model: <strong>{model}</strong>
           </DialogDescription>
         </DialogHeader>
 
