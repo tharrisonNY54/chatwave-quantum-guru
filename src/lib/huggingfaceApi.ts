@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 const HF_INFERENCE_API = 'https://api-inference.huggingface.co/models/';
 
 // Initialize with a default model, but this can be configured
-let currentModel = 'mistralai/Mistral-7B-Instruct-v0.2';
+const currentModel = 'Qwen/Qwen2.5-Omni-7B';
 let apiKey = '';
 
 export const setHuggingFaceApiKey = (key: string) => {
@@ -23,20 +23,20 @@ export const getHuggingFaceApiKey = () => {
   return apiKey;
 };
 
-export const setHuggingFaceModel = (model: string) => {
-  currentModel = model;
-  localStorage.setItem('hf_model', model);
-};
+// export const setHuggingFaceModel = (model: string) => {
+//   currentModel = model;
+//   localStorage.setItem('hf_model', model);
+// };
 
-export const getHuggingFaceModel = () => {
-  if (!currentModel || currentModel === 'mistralai/Mistral-7B-Instruct-v0.2') {
-    const savedModel = localStorage.getItem('hf_model');
-    if (savedModel) {
-      currentModel = savedModel;
-    }
-  }
-  return currentModel;
-};
+// export const getHuggingFaceModel = () => {
+//   if (!currentModel || currentModel === 'mistralai/Mistral-7B-Instruct-v0.2') {
+//     const savedModel = localStorage.getItem('hf_model');
+//     if (savedModel) {
+//       currentModel = savedModel;
+//     }
+//   }
+//   return currentModel;
+// };
 
 export const sendPromptToHuggingFace = async (
   prompt: string,
@@ -50,7 +50,7 @@ export const sendPromptToHuggingFace = async (
     throw new Error('Hugging Face API key is not set');
   }
 
-  const model = getHuggingFaceModel();
+  const model = currentModel;
 
   // Construct a simple text prompt with system message and conversation history
   let textPrompt =
