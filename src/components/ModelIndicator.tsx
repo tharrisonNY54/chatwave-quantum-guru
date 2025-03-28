@@ -20,7 +20,7 @@ const ModelIndicator: React.FC = () => {
 
       setModelInfo({
         isUsingHF: !!apiKey,
-        modelName: 'Qwen/Qwen2.5-Omni-7B',
+        modelName: 'mistralai/Mistral-7B-Instruct-v0.2',
         isConnected: connectionStatus === 'connected',
         lastError,
         isNetworkOffline: !navigator.onLine,
