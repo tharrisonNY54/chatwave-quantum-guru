@@ -51,199 +51,75 @@ export const sendPromptToHuggingFace = async (
   }
 
   const model = getHuggingFaceModel();
-  
-  // Format the system prompt and history for text generation
-  let textPrompt = "You are QuantumGuru, an AI assistant specialized in explaining Q, the quantum computing programming language. Provide concise, accurate responses about quantum computing concepts, Q syntax, and quantum algorithms.\n\n";
-  
-  // Add conversation history
-  conversationHistory.forEach(msg => {
+
+  // Construct a simple text prompt with system message and conversation history
+  let textPrompt =
+    "You are QuantumGuru, an AI assistant specialized in explaining Q, the quantum computing programming language. Provide concise, accurate responses about quantum computing concepts, Q syntax, and quantum algorithms.\n\n";
+
+  conversationHistory.forEach((msg) => {
     textPrompt += `${msg.role === 'user' ? 'Human' : 'Assistant'}: ${msg.content}\n`;
   });
-  
-  // Add the current prompt
+
   textPrompt += `Human: ${prompt}\nAssistant:`;
-  
-  // Format for chat completion models
-  const messages = [
-    {
-      role: 'system',
-      content: 'You are QuantumGuru, an AI assistant specialized in explaining Q, the quantum computing programming language. Provide concise, accurate responses about quantum computing concepts, Q syntax, and quantum algorithms.'
-    }
-  ];
-  
-  // Add conversation history for chat format
-  conversationHistory.forEach(msg => {
-    messages.push({
-      role: msg.role,
-      content: msg.content
-    });
-  });
-  
-  // Add the current prompt for chat format
-  messages.push({
-    role: 'user',
-    content: prompt
-  });
 
   try {
-    console.log('Sending to Hugging Face model:', model);
-    
-    // Try multiple formats, starting with the most common text input format
-    // 1. Simple text input format (works with most models)
-    try {
-      const textResponse = await fetch(`${HF_INFERENCE_API}${model}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+    const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: textPrompt,
+        parameters: {
+          max_new_tokens: 1024,
+          temperature: 0.7,
+          top_p: 0.95,
+          do_sample: true,
         },
-        body: JSON.stringify({ 
-          inputs: textPrompt,
-          parameters: {
-            max_new_tokens: 1024,
-            temperature: 0.7,
-            top_p: 0.95,
-            do_sample: true
-          }
-        }),
-      });
+      }),
+    });
 
-      if (textResponse.ok) {
-        const data = await textResponse.json();
-        localStorage.setItem('hf_connection_status', 'connected');
-        localStorage.removeItem('hf_last_error');
-        
-        if (Array.isArray(data) && data[0]?.generated_text) {
-          // Extract just the assistant's response
-          const fullText = data[0].generated_text;
-          // Try to extract just the assistant's reply by finding the last "Assistant:" in the text
-          const assistantPrefixIndex = fullText.lastIndexOf('Assistant:');
-          if (assistantPrefixIndex !== -1) {
-            return fullText.substring(assistantPrefixIndex + 'Assistant:'.length).trim();
-          }
-          return fullText;
-        } else if (data.generated_text) {
-          return data.generated_text;
-        }
-        
-        // If we can't parse it in a known format, return the raw response
-        return JSON.stringify(data);
-      }
-      
-      // If that format didn't work, continue to the next format
-      console.log('Text format failed, trying chat format:', textResponse.status);
-    } catch (error) {
-      console.error('Error with text format:', error);
-    }
-    
-    // 2. Try OpenAI-like chat format
-    try {
-      const chatResponse = await fetch(`${HF_INFERENCE_API}${model}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          inputs: {
-            messages
-          },
-          parameters: {
-            max_new_tokens: 1024,
-            temperature: 0.7,
-            top_p: 0.95,
-            do_sample: true
-          }
-        }),
-      });
+    const raw = await response.text();
 
-      if (chatResponse.ok) {
-        const data = await chatResponse.json();
-        localStorage.setItem('hf_connection_status', 'connected');
-        localStorage.removeItem('hf_last_error');
-        
-        if (data.generated_text) {
-          return data.generated_text;
-        } else if (Array.isArray(data) && data[0]?.generated_text) {
-          return data[0].generated_text;
-        } else if (data.outputs) {
-          return data.outputs;
-        } else if (Array.isArray(data) && data[0]?.message?.content) {
-          return data[0].message.content;
-        } else if (data?.message?.content) {
-          return data.message.content;
-        }
-        
-        // If we can't parse it in a known format, return the raw response
-        return JSON.stringify(data);
-      }
-      
-      // If that format didn't work, try one more format
-      console.log('Chat format failed, trying array format:', chatResponse.status);
-    } catch (error) {
-      console.error('Error with chat format:', error);
-    }
-    
-    // 3. Try array of messages format
-    try {
-      const arrayResponse = await fetch(`${HF_INFERENCE_API}${model}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          inputs: messages,
-          parameters: {
-            max_new_tokens: 1024,
-            temperature: 0.7,
-            top_p: 0.95,
-            do_sample: true
-          }
-        }),
-      });
-
-      if (arrayResponse.ok) {
-        const data = await arrayResponse.json();
-        localStorage.setItem('hf_connection_status', 'connected');
-        localStorage.removeItem('hf_last_error');
-        
-        if (typeof data === 'string') {
-          return data;
-        } else if (Array.isArray(data)) {
-          return data[data.length - 1]?.content || JSON.stringify(data);
-        }
-        
-        // If we can't parse it in a known format, return the raw response
-        return JSON.stringify(data);
-      }
-      
-      // All formats failed, report the error
-      const errorText = await arrayResponse.text();
+    if (!response.ok) {
+      console.error(`HF API Error [${response.status}]:`, raw);
       localStorage.setItem('hf_connection_status', 'failed');
-      localStorage.setItem('hf_last_error', `Format error: ${arrayResponse.status} - ${errorText.substring(0, 100)}`);
-      
-      if (arrayResponse.status === 401) {
-        toast.error('Invalid API Key. Please check your Hugging Face API key.');
-      } else if (arrayResponse.status === 404) {
-        toast.error(`Model not found: ${model}. Please check the model name.`);
-      } else if (arrayResponse.status === 422) {
-        toast.error(`This model doesn't support any of our input formats. Please try a different model.`);
+      localStorage.setItem('hf_last_error', raw.slice(0, 150));
+
+      if (response.status === 401) {
+        toast.error('Invalid API Key.');
+      } else if (response.status === 404) {
+        toast.error(`Model not found: ${model}`);
+      } else if (response.status === 422) {
+        toast.error(`Model input format not supported.`);
       } else {
-        toast.error(`API error: ${arrayResponse.status}. Please try a different model.`);
+        toast.error(`Unexpected Hugging Face API error.`);
       }
-      
-      throw new Error(`API error: ${arrayResponse.status}`);
-    } catch (error) {
-      console.error('Error with array format:', error);
-      localStorage.setItem('hf_connection_status', 'failed');
-      localStorage.setItem('hf_last_error', `Error: ${error.message}`);
-      throw error;
+
+      throw new Error(`Hugging Face API error: ${response.status}`);
     }
-  } catch (error) {
-    console.error('Error querying Hugging Face:', error);
-    localStorage.setItem('hf_connection_status', 'failed');
-    localStorage.setItem('hf_last_error', error.message || 'Unknown error');
-    throw new Error(`Failed to get response from Hugging Face: ${error.message}`);
+
+    localStorage.setItem('hf_connection_status', 'connected');
+    localStorage.removeItem('hf_last_error');
+
+    const data = JSON.parse(raw);
+
+    // Handle standard return shapes
+    if (Array.isArray(data) && data[0]?.generated_text) {
+      const full = data[0].generated_text;
+      const aiIndex = full.lastIndexOf('Assistant:');
+      return aiIndex !== -1 ? full.slice(aiIndex + 10).trim() : full.trim();
+    } else if (data.generated_text) {
+      return data.generated_text.trim();
+    }
+
+    // If unrecognized format, return raw
+    return JSON.stringify(data);
+  } catch (err: any) {
+    console.error('Failed to call Hugging Face API:', err);
+    toast.error('Failed to call Hugging Face API.');
+    throw err;
   }
 };
+
