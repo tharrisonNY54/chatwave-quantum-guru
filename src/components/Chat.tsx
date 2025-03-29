@@ -1,31 +1,39 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Message as MessageType } from '../lib/types';
+import { Message as MessageType } from '@/lib/types';
 import Message from './Message';
 import MessageInput from './MessageInput';
-import { sendMessageToAPI } from '../lib/api';
-import { sendPromptToHuggingFace, getHuggingFaceApiKey } from '../lib/huggingfaceApi';
+import { sendPromptToHuggingFace } from '@/lib/huggingfaceApi';
 import { toast } from 'sonner';
 
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<MessageType[]>([
     {
       id: 'welcome',
-      content: "Hello! I'm QuantumGuru, your AI assistant for learning about Q, the quantum computing programming language. How can I help you today?",
+      content: "Hello! I'm QuantumGuru, your AI assistant for learning about Q#, the quantum programming language by Microsoft. How can I help you today?",
       role: 'assistant',
       timestamp: new Date(),
     },
   ]);
+
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [usingHuggingFace, setUsingHuggingFace] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+
+  useEffect(() => {
+    const handleInitialPrompt = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        sendMessage(customEvent.detail);
+      }
+    };
+
+    window.addEventListener('send-initial-prompt', handleInitialPrompt);
+    return () => {
+      window.removeEventListener('send-initial-prompt', handleInitialPrompt);
+    };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-    // Check if Hugging Face API key is set
-    const apiKey = getHuggingFaceApiKey();
-    setUsingHuggingFace(!!apiKey);
   }, [messages]);
 
   const scrollToBottom = () => {
@@ -33,64 +41,34 @@ const Chat: React.FC = () => {
   };
 
   const sendMessage = async (content: string) => {
-    // Add user message
     const userMessage: MessageType = {
       id: `user-${Date.now()}`,
       content,
       role: 'user',
       timestamp: new Date(),
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
-    
+
     try {
-      let response: MessageType;
-      
-      if (usingHuggingFace) {
-        // Use Hugging Face API
-        try {
-          const hfResponse = await sendPromptToHuggingFace(content, messages.filter(msg => msg.id !== 'welcome'));
-          response = {
-            id: `assistant-${Date.now()}`,
-            content: hfResponse,
-            role: 'assistant',
-            timestamp: new Date(),
-          };
-          // Reset retry count on success
-          setRetryCount(0);
-        } catch (error) {
-          console.error('Error with Hugging Face API:', error);
-          
-          // Only retry a few times before falling back
-          if (retryCount < 2) {
-            setRetryCount(prev => prev + 1);
-            toast.error(`Hugging Face API error. Retrying... (${retryCount + 1}/3)`);
-            
-            // Try with a different format if this isn't the first retry
-            response = await sendMessageToAPI(content);
-          } else {
-            // Fall back to mock API after retries
-            toast.error('Falling back to mock API due to persistent Hugging Face errors');
-            setUsingHuggingFace(false);
-            response = await sendMessageToAPI(content);
-          }
-        }
-      } else {
-        // Use mock API as fallback
-        response = await sendMessageToAPI(content);
-      }
-      
-      // Add AI response
-      setMessages(prev => [...prev, response]);
+      const responseText = await sendPromptToHuggingFace(content, messages.filter(msg => msg.id !== 'welcome'));
+
+      const aiMessage: MessageType = {
+        id: `assistant-${Date.now()}`,
+        content: responseText,
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
-      // Add error message
       setMessages(prev => [
         ...prev,
         {
           id: `error-${Date.now()}`,
-          content: "I'm sorry, there was an error processing your request. Please try again later.",
+          content: "There was an error processing your request. Please try again later.",
           role: 'assistant',
           timestamp: new Date(),
         },
@@ -106,7 +84,7 @@ const Chat: React.FC = () => {
         {messages.map(message => (
           <Message key={message.id} message={message} />
         ))}
-        
+
         {isLoading && (
           <div className="flex justify-start mb-4">
             <div className="ai-message">
@@ -116,10 +94,10 @@ const Chat: React.FC = () => {
             </div>
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
-      
+
       <div className="p-4 border-t border-white/10">
         <MessageInput onSendMessage={sendMessage} isLoading={isLoading} />
       </div>
