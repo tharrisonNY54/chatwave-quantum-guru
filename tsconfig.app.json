@@ -26,5 +26,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "server/server.ts", "server/db.ts", "server/routes/chatRoutes.ts"]
 }
