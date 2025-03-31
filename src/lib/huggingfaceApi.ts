@@ -50,3 +50,19 @@ export const sendPromptToHuggingFace = async (
     throw err;
   }
 };
+
+export async function sendMessageToAI(chat_id: number, content: string) {
+  const res = await fetch("http://localhost:4000/ai/reply", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id, content }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to get AI response");
+  }
+
+  const data = await res.json();
+  return data; // { user: {...}, assistant: {...} }
+}
+

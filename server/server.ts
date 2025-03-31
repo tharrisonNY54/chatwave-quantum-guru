@@ -15,7 +15,7 @@ app.use('/', chatRoutes);
 
 pool.connect()
   .then(() => console.log('✅ Connected to PostgreSQL'))
-  .catch((err) => console.error('❌ Database connection error:', err));
+  .catch((err: unknown) => console.error('❌ Database connection error:', err));
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);

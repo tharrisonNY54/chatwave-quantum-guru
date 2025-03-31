@@ -4,6 +4,7 @@ import Chat from '@/components/Chat';
 import ChatSidebar from '@/components/ChatSidebar';
 import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { sendMessageToAI } from "@/lib/huggingfaceApi";
 
 const ChatPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

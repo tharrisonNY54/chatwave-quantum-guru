@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Message as MessageType } from '@/lib/types';
 import Message from './Message';
 import MessageInput from './MessageInput';
-import { sendPromptToHuggingFace } from '@/lib/huggingfaceApi';
+import { sendMessageToAI } from '@/lib/huggingfaceApi';
 import { toast } from 'sonner';
 
 const Chat: React.FC = () => {
@@ -40,43 +40,37 @@ const Chat: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const sendMessage = async (content: string) => {
-    const userMessage: MessageType = {
-      id: `user-${Date.now()}`,
-      content,
-      role: 'user',
-      timestamp: new Date(),
-    };
+  const chat_id = 1; // 🔁 Replace with dynamic ID later if needed
 
-    setMessages(prev => [...prev, userMessage]);
-    setIsLoading(true);
+const sendMessage = async (content: string) => {
+  setIsLoading(true);
 
-    try {
-      const responseText = await sendPromptToHuggingFace(content, messages.filter(msg => msg.id !== 'welcome'));
+  try {
+    const { user, assistant } = await sendMessageToAI(chat_id, content);
 
-      const aiMessage: MessageType = {
-        id: `assistant-${Date.now()}`,
-        content: responseText,
-        role: 'assistant',
-        timestamp: new Date(),
-      };
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `user-${user.id}`,
+        content: user.content,
+        role: user.role,
+        timestamp: new Date(user.created_at),
+      },
+      {
+        id: `assistant-${assistant.id}`,
+        content: assistant.content,
+        role: assistant.role,
+        timestamp: new Date(assistant.created_at),
+      },
+    ]);
+  } catch (error) {
+    console.error('Error sending message:', error);
+    toast.error("There was an error processing your request.");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-      setMessages(prev => [...prev, aiMessage]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setMessages(prev => [
-        ...prev,
-        {
-          id: `error-${Date.now()}`,
-          content: "There was an error processing your request. Please try again later.",
-          role: 'assistant',
-          timestamp: new Date(),
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="flex flex-col h-full">
