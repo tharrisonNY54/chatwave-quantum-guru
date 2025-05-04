@@ -46,19 +46,19 @@ router.post('/ai/reply', async (req, res) => {
     );
 
     // 2. Call your local Mistral server
-    const response = await fetch('http://localhost:8000/v1/completions', {
+    const response = await fetch('http://localhost:8000/ai/reply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: "mistral",
-        prompt: content,
-        temperature: 0.7,
-        max_tokens: 200
+        prompt: content
       }),
-    });
+    });    
 
-    const data = await response.json();
-    const assistantReply = data.choices?.[0]?.text?.trim() || "[No reply]";
+    const raw = await response.text();
+    console.log("🧠 Raw LLM response:", raw);
+    const data = JSON.parse(raw);
+
+    const assistantReply = data.content?.trim() || "[No reply]";
 
     // 3. Save assistant reply
     const aiMsg = await pool.query(
