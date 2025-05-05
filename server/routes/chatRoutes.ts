@@ -46,11 +46,12 @@ router.post('/ai/reply', async (req, res) => {
     );
 
     // 2. Call your local Mistral server
-    const response = await fetch('http://localhost:8000/ai/reply', {
+    const response = await fetch('http://localhost:4000/ai/reply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt: content
+        prompt: content,
+        chat_id: 0,
       }),
     });    
 

@@ -23,23 +23,23 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code, language = 'q' }) => {
       // Highlight keywords
       keywords.forEach(keyword => {
         const regex = new RegExp(`\\b${keyword}\\b`, 'g');
-        formattedCode = formattedCode.replace(regex, `<span class="text-orange-400">${keyword}</span>`);
+        formattedCode = formattedCode.replace(regex, `<span class="text-qbit-superposition">${keyword}</span>`);
       });
       
       // Highlight types
       types.forEach(type => {
         const regex = new RegExp(`\\b${type}\\b`, 'g');
-        formattedCode = formattedCode.replace(regex, `<span class="text-green-400">${type}</span>`);
+        formattedCode = formattedCode.replace(regex, `<span class="text-qbit-zero">${type}</span>`);
       });
       
       // Highlight functions
       functions.forEach(func => {
         const regex = new RegExp(`\\b${func}\\b`, 'g');
-        formattedCode = formattedCode.replace(regex, `<span class="text-blue-400">${func}</span>`);
+        formattedCode = formattedCode.replace(regex, `<span class="text-quantum-light">${func}</span>`);
       });
       
       // Highlight string literals
-      formattedCode = formattedCode.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '<span class="text-yellow-300">$&</span>');
+      formattedCode = formattedCode.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '<span class="text-qbit-one">$&</span>');
       
       // Highlight comments
       formattedCode = formattedCode.replace(/\/\/.*$/gm, '<span class="text-gray-400">$&</span>');
@@ -55,19 +55,19 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code, language = 'q' }) => {
   
   return (
     <div className="my-4 rounded-lg overflow-hidden glass">
-      <div className="flex justify-between items-center px-4 py-2 border-b border-white/10">
-        <span className="text-xs font-mono text-muted-foreground">{language.toUpperCase()}</span>
+      <div className="flex justify-between items-center px-4 py-2 border-b border-white/10 bg-black/20">
+        <span className="text-xs font-mono text-quantum-light/80">{language.toUpperCase()}</span>
         <button 
           onClick={copyToClipboard}
           className="p-1 rounded hover:bg-white/10 transition-colors"
           aria-label="Copy code to clipboard"
         >
-          <ClipboardCopy size={14} />
+          <ClipboardCopy size={14} className="text-quantum-light/80 hover:text-quantum-light" />
         </button>
       </div>
       <pre 
         ref={codeRef} 
-        className="p-4 text-sm font-mono overflow-x-auto"
+        className="p-4 text-sm font-mono overflow-x-auto bg-black/30"
       >
         {code}
       </pre>

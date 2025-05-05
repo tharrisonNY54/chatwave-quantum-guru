@@ -9,6 +9,8 @@ interface Particle {
   speedY: number;
   opacity: number;
   element: HTMLDivElement;
+  drift: number;
+  phase: number;
 }
 
 const ParticleBackground = () => {
@@ -21,15 +23,15 @@ const ParticleBackground = () => {
     
     const container = containerRef.current;
     const particles: Particle[] = [];
-    const particleCount = 20;
+    const particleCount = 25;
     
     // Create particles
     for (let i = 0; i < particleCount; i++) {
       const particle = document.createElement('div');
-      particle.className = 'particle';
+      particle.className = 'quantum-particle';
       container.appendChild(particle);
       
-      const size = Math.random() * 4 + 2;
+      const size = Math.random() * 15 + 5;
       particle.style.width = `${size}px`;
       particle.style.height = `${size}px`;
       
@@ -37,10 +39,12 @@ const ParticleBackground = () => {
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
         size,
-        speedX: (Math.random() - 0.5) * 0.5,
-        speedY: (Math.random() - 0.5) * 0.5,
-        opacity: Math.random() * 0.5 + 0.2,
-        element: particle
+        speedX: (Math.random() - 0.5) * 0.3,
+        speedY: (Math.random() - 0.5) * 0.3,
+        opacity: Math.random() * 0.7 + 0.1,
+        element: particle,
+        drift: Math.random() * 5 + 2,
+        phase: Math.random() * Math.PI * 2
       };
       
       particle.style.opacity = newParticle.opacity.toString();
@@ -52,20 +56,33 @@ const ParticleBackground = () => {
     // Animation function
     const animateParticles = () => {
       const containerRect = container.getBoundingClientRect();
+      const time = Date.now() / 1000;
       
-      particlesRef.current.forEach(particle => {
+      particlesRef.current.forEach((particle, index) => {
+        // Add wave motion
+        const waveX = Math.sin(time * 0.5 + particle.phase) * particle.drift;
+        const waveY = Math.cos(time * 0.3 + particle.phase) * particle.drift;
+        
         // Update position
-        particle.x += particle.speedX;
-        particle.y += particle.speedY;
+        particle.x += particle.speedX + waveX * 0.03;
+        particle.y += particle.speedY + waveY * 0.03;
         
         // Boundary check
-        if (particle.x < 0 || particle.x > containerRect.width) {
-          particle.speedX *= -1;
+        if (particle.x < 0) {
+          particle.x = containerRect.width;
+        } else if (particle.x > containerRect.width) {
+          particle.x = 0;
         }
         
-        if (particle.y < 0 || particle.y > containerRect.height) {
-          particle.speedY *= -1;
+        if (particle.y < 0) {
+          particle.y = containerRect.height;
+        } else if (particle.y > containerRect.height) {
+          particle.y = 0;
         }
+        
+        // Pulse effect
+        const pulseOpacity = 0.3 + Math.sin(time * 1.5 + index) * 0.2;
+        particle.element.style.opacity = pulseOpacity.toString();
         
         // Apply new position
         particle.element.style.transform = `translate(${particle.x}px, ${particle.y}px)`;

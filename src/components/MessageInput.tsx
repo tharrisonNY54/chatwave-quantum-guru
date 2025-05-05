@@ -1,6 +1,6 @@
 
 import React, { useState, FormEvent, useRef, useEffect } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Sparkles } from 'lucide-react';
 
 interface MessageInputProps {
   onSendMessage: (content: string) => Promise<void>;
@@ -46,7 +46,8 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isLoading })
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <div className="glass-input rounded-xl overflow-hidden flex items-end">
+      <div className="glass-input rounded-xl overflow-hidden flex items-end relative">
+        <Sparkles className="absolute left-3 top-3 h-4 w-4 text-quantum-light/50" />
         <textarea
           ref={inputRef}
           value={message}
@@ -54,7 +55,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isLoading })
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           placeholder="Ask about the Q quantum language..."
-          className="w-full resize-none bg-transparent outline-none border-0 py-3 px-4 max-h-32 min-h-[52px]"
+          className="w-full resize-none bg-transparent outline-none border-0 py-3 pl-9 pr-4 max-h-32 min-h-[52px]"
           rows={1}
           disabled={isLoading}
         />
@@ -62,8 +63,8 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isLoading })
           type="submit"
           className={`h-10 w-10 flex items-center justify-center m-1 p-1 rounded-lg transition-colors ${
             message.trim() && !isLoading
-              ? 'quantum-gradient'
-              : 'bg-secondary text-muted-foreground'
+              ? 'bg-quantum hover:bg-quantum-dark text-white'
+              : 'bg-secondary/50 text-muted-foreground'
           }`}
           disabled={!message.trim() || isLoading}
           aria-label="Send message"
