@@ -17,7 +17,7 @@ const Index = () => {
         </div>
         
         <footer className="mt-4 text-center text-xs text-muted-foreground">
-          <p>QuantumGuru AI Assistant &copy; {new Date().getFullYear()}</p>
+          <p>EntangleAI AI Assistant &copy; {new Date().getFullYear()}</p>
         </footer>
       </div>
     </div>

@@ -11,6 +11,8 @@ const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
+
+// ✅ Fixed: use a proper base path for router
 app.use('/', chatRoutes);
 
 pool.connect()

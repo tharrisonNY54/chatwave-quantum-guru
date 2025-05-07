@@ -11,7 +11,7 @@ export const sendMessageToAPI = async (content: string): Promise<Message> => {
   let response = "I'm sorry, I don't have information about that specific topic in Q language yet.";
   
   if (content.toLowerCase().includes('hello') || content.toLowerCase().includes('hi')) {
-    response = "Hello! I'm QuantumGuru, your AI assistant for learning about Q, the quantum computing programming language. How can I help you today?";
+    response = "Hello! I'm EntangleAI, your AI assistant for learning about Q, the quantum computing programming language. How can I help you today?";
   } else if (content.toLowerCase().includes('what is q')) {
     response = "Q is a quantum computing programming language designed for expressing quantum algorithms. It's part of Microsoft's Quantum Development Kit and allows you to write programs for quantum computers in a high-level, familiar way. Q is specifically designed to help developers write quantum programs without needing to understand all the complex physics behind quantum computing.";
   } else if (content.toLowerCase().includes('qubit') || content.toLowerCase().includes('qubits')) {

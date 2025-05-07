@@ -8,7 +8,7 @@ const Header: React.FC = () => {
       <div className="flex items-center gap-2">
         <Atom className="text-quantum-light h-5 w-5 animate-pulse-slow" />
         <h1 className="text-lg font-bold text-white tracking-wide bg-gradient-to-r from-white via-purple-200 to-quantum-light bg-clip-text text-transparent">
-          QuantumGuru
+          EntangleAI
         </h1>
       </div>
 

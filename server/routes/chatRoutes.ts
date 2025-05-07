@@ -37,46 +37,55 @@ router.get('/chats/:chatId/messages', async (req, res) => {
 
 router.post('/ai/reply', async (req, res) => {
   const { chat_id, content } = req.body;
+  console.log("🧠 Incoming /ai/reply body:", req.body);
 
   try {
-    // 1. Save the user's message
+    console.log("📝 Inserting user message:", { chat_id, role: 'user', content });
     const userMsg = await pool.query(
       'INSERT INTO messages (chat_id, role, content) VALUES ($1, $2, $3) RETURNING *',
       [chat_id, 'user', content]
     );
 
-    // 2. Call your local Mistral server
-    const response = await fetch('http://localhost:4000/ai/reply', {
+    const payload = { prompt: content, chat_id };
+    console.log("🧠 Sending to RAG backend:", payload);
+    const response = await fetch('http://127.0.0.1:4000/ai/reply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: content,
-        chat_id: 0,
-      }),
-    });    
-
-    const raw = await response.text();
-    console.log("🧠 Raw LLM response:", raw);
-    const data = JSON.parse(raw);
-
-    const assistantReply = data.content?.trim() || "[No reply]";
-
-    // 3. Save assistant reply
-    const aiMsg = await pool.query(
-      'INSERT INTO messages (chat_id, role, content) VALUES ($1, $2, $3) RETURNING *',
-      [chat_id, 'assistant', assistantReply]
-    );
-
-    // 4. Send reply to frontend
-    res.json({
-      user: userMsg.rows[0],
-      assistant: aiMsg.rows[0],
+      body: JSON.stringify(payload)
     });
+
+    const data = await response.json();
+    console.log("🤖 AI REPLY FROM FASTAPI:", data);
+
+    const assistantReply =
+      data.content?.trim() || data.choices?.[0]?.text?.trim();
+
+    if (assistantReply && assistantReply !== '[No reply]') {
+      console.log("🤖 Inserting assistant message:", {
+        chat_id,
+        role: 'assistant',
+        content: assistantReply
+      });
+
+      const aiMsg = await pool.query(
+        'INSERT INTO messages (chat_id, role, content) VALUES ($1, $2, $3) RETURNING *',
+        [chat_id, 'assistant', assistantReply]
+      );
+
+      res.status(200).json({
+        user: userMsg.rows[0],
+        assistant: aiMsg.rows[0]
+      });
+    } else {
+      console.warn("⚠️ Assistant reply was invalid. Skipping insert.");
+      res.status(204).send(); // No Content
+    }
 
   } catch (err) {
     console.error('❌ /ai/reply error:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 export default router;

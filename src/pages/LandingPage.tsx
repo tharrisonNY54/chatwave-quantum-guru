@@ -40,7 +40,7 @@ const LandingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen text-white flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen  text-white flex items-center justify-center relative overflow-hidden">
       <ParticleBackground />
       
       {/* Centered glow */}
@@ -50,7 +50,7 @@ const LandingPage: React.FC = () => {
         <div className="flex justify-center items-center mb-2">
           <Atom className="h-10 w-10 text-quantum-light animate-pulse-slow mr-3" />
           <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-quantum-light bg-clip-text text-transparent">
-            QuantumGuru
+          EntangleAI
           </h1>
         </div>
 
@@ -80,10 +80,6 @@ const LandingPage: React.FC = () => {
             <Button type="submit" className="bg-quantum hover:bg-quantum-dark transition-colors">
               <Bot className="mr-2 h-4 w-4" />
               Start New Chat
-            </Button>
-
-            <Button variant="outline" className="border-white/10 hover:bg-white/5 text-white/70" disabled>
-              Load Previous Chat (coming soon)
             </Button>
 
             <Button 

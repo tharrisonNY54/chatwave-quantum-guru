@@ -9,7 +9,7 @@ export const sendPromptToHuggingFace = async (
   conversationHistory: Message[]
 ): Promise<string> => {
   // Construct a simple prompt for the local model
-  let textPrompt = "You are QuantumGuru, an AI assistant that teaches Q#, the quantum computing programming language.\n\n";
+  let textPrompt = "You are EntangleAI, an AI assistant that teaches Q#, the quantum computing programming language.\n\n";
   conversationHistory.forEach((msg) => {
     textPrompt += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
   });

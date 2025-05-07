@@ -9,7 +9,7 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<MessageType[]>([
     {
       id: 'welcome',
-      content: "Hello! I'm QuantumGuru, your AI assistant for learning about Q#, the quantum programming language by Microsoft. How can I help you today?",
+      content: "Hello! I'm EntangleAI, your AI assistant for learning about Q#, the quantum programming language by Microsoft. How can I help you today?",
       role: 'assistant',
       timestamp: new Date(),
     },
